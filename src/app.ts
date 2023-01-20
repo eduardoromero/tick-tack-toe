@@ -1,4 +1,27 @@
+import EventEmitter from "events";
+
 class BoardRenderer {
+    public subscribe(emitter: EventEmitter) {
+        emitter.on(events.GAME_UPDATED, (event) => {
+            const {board} = event;
+
+            BoardRenderer.render(board);
+            console.log()
+        });
+
+        emitter.on(events.BOARD_FULL, () => BoardRenderer.tie());
+        emitter.on(events.WINNER, (winner) => BoardRenderer.win(winner));
+    }
+
+    public static tie() {
+        console.log("🤷");
+    }
+
+    public static win(winner) {
+        console.log('====== winner ======')
+        console.log(`🎉🎉🎉 ${winner} 🎉🎉🎉`);
+    }
+
     public static render(board: Board) {
         board.forEach(row => {
             const row_drawing = row.map(c => c.value || '□').join('|');
@@ -24,46 +47,30 @@ export type GameState = {
 
 export type Board = Cell[][];
 
-export class TicTacToeEngine {
+enum events {
+    GAME_UPDATED = 'GAME_UPDATED',
+    BOARD_FULL = 'BOARD_FULL',
+    WINNER = 'WINNER',
+}
+
+export class TicTacToeEngine extends EventEmitter {
     private rows: Cell[][] = []
     private winner: GameBoardValue;
     private moveCounter = 0;
     private matchEnded = false;
 
-    public constructor() {
-        this.rows[0] = [
-            {value: undefined, row: 0, column: 0},
-            {
-                value: undefined,
-                row: 0,
-                column: 1
-            }, {
-                value: undefined,
-                row: 0,
-                column: 2
-            }];
-        this.rows[1] = [
-            {value: undefined, row: 1, column: 0},
-            {
-                value: undefined,
-                row: 1,
-                column: 1
-            }, {
-                value: undefined,
-                row: 1,
-                column: 2
-            }];
-        this.rows[2] = [
-            {value: undefined, row: 2, column: 0},
-            {
-                value: undefined,
-                row: 2,
-                column: 1
-            }, {
-                value: undefined,
-                row: 2,
-                column: 2
-            }];
+    public constructor(size: number = 3) {
+        super();
+
+        new Array(3).fill([]).forEach((r, x) => {
+            for (let y = 0; y < size; y++) {
+                if (!this.rows[x]) {
+                    this.rows[x] = [];
+                }
+
+                this.rows[x][y] = {value: undefined, row: x, column: y};
+            }
+        });
     }
 
     mark(value: Marks, row, column): GameState {
@@ -83,17 +90,27 @@ export class TicTacToeEngine {
             this.matchEnded = true;
         }
 
-        // board is full ?
         this.moveCounter++;
+        this.emit(events.GAME_UPDATED, {moves: this.moveCounter, state: this.getState(), board: this.getMatchState()});
 
-        if (this.moveCounter === this.rows.length * this.rows.length) {
-            this.matchEnded = true;
+        if (this.winner) {
+            this.emit(events.WINNER, this.winner);
         }
 
+        // board is full ?
+        if (this.moveCounter === this.rows.length * this.rows.length) {
+            this.matchEnded = true;
+            this.emit(events.BOARD_FULL, {state: this.getState()});
+        }
+
+        return this.getState();
+    }
+
+    getState() {
         return {
             winner: this.winner,
             matchEnded: this.matchEnded,
-        }
+        };
     }
 
     // shallow copy of the status, readonly state effectively;)
@@ -149,19 +166,30 @@ export class TicTacToeEngine {
 // new game!
 const game = new TicTacToeEngine();
 
-BoardRenderer.render(game.getMatchState());
+const renderer = new BoardRenderer();
+renderer.subscribe(game);
 
-console.log(game.mark('x', 0, 0));
-BoardRenderer.render(game.getMatchState());
+// diagonal X wins
+// game.mark('x', 0, 0);
+// game.mark('o', 1, 0);
+// game.mark('x', 1, 1);
+// game.mark('o', 0, 2);
+// game.mark('x', 2, 2);
 
-console.log(game.mark('o', 2, 0));
-BoardRenderer.render(game.getMatchState());
+// the other diagonal X wins
+// game.mark('x', 0, 2);
+// game.mark('o', 2, 2);
+// game.mark('x', 1, 1);
+// game.mark('o', 0, 0);
+// game.mark('x', 2, 0);
 
-console.log(game.mark('x', 0, 1));
-BoardRenderer.render(game.getMatchState());
 
-console.log(game.mark('o', 1, 1));
-BoardRenderer.render(game.getMatchState());
-
-console.log(game.mark('x', 0, 2));
-BoardRenderer.render(game.getMatchState());
+game.mark('x', 0, 0);
+game.mark('o', 1, 0);
+game.mark('x', 0, 1);
+game.mark('o', 0, 2);
+game.mark('x', 2, 0);
+game.mark('o', 1, 1);
+game.mark('x', 1, 2);
+game.mark('o', 2, 2);
+game.mark('x', 2, 1);
