@@ -1,0 +1,21 @@
+{
+  "name": "ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "none.ts",
+  "type": "commonjs",
+  "scripts": {
+    "app": "npx tsc && node build/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "got": "^11.8.6",
+    "typescript": "^4.9.4"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18"
+  }
+}
