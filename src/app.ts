@@ -54,16 +54,31 @@ enum events {
 }
 
 export class TicTacToeEngine extends EventEmitter {
+    private readonly size: number;
     private rows: Cell[][] = []
     private winner: GameBoardValue;
     private moveCounter = 0;
     private matchEnded = false;
+    private turn: GameBoardValue = undefined
 
     public constructor(size: number = 3) {
         super();
 
+        this.size = size;
+        this.reset();
+    }
+
+    /**
+     * Defines who will take the first turn;
+     * @param starts
+     */
+    public start(starts: Marks) {
+        this.turn = starts;
+    }
+
+    public reset() {
         new Array(3).fill([]).forEach((r, x) => {
-            for (let y = 0; y < size; y++) {
+            for (let y = 0; y < this.size; y++) {
                 if (!this.rows[x]) {
                     this.rows[x] = [];
                 }
@@ -71,22 +86,33 @@ export class TicTacToeEngine extends EventEmitter {
                 this.rows[x][y] = {value: undefined, row: x, column: y};
             }
         });
+
+        this.moveCounter = 0;
+        this.matchEnded = false;
+        this.turn = undefined;
+        this.winner = undefined;
     }
 
-    mark(value: Marks, row, column): GameState {
+    mark(row, column): GameState {
         const target = this.rows[row][column] || undefined;
 
-        if (value === undefined) {
-            throw new Error(`Invalid mark, please try again.`);
+        if (this.matchEnded) {
+            throw new Error(`Please reset the game and start a new match.`);
+        }
+
+        if (this.turn === undefined) {
+            throw new Error(`Please set who starts first.`);
         }
 
         if (target === undefined || target.value !== undefined) {
             throw new Error(`${row}, ${column} is an invalid position.`)
         }
 
-        target.value = value;
-        if (this.checkMatchStatus(target)) {
-            this.winner = value;
+        const cell = {value: this.turn, row, column};
+        this.rows[row][column] = cell;
+
+        if (this.checkMatchStatus(cell)) {
+            this.winner = this.turn;
             this.matchEnded = true;
         }
 
@@ -102,6 +128,9 @@ export class TicTacToeEngine extends EventEmitter {
             this.matchEnded = true;
             this.emit(events.BOARD_FULL, {state: this.getState()});
         }
+
+        // swap players for next turn.
+        this.turn = this.turn === 'x' ? 'o' : 'x';
 
         return this.getState();
     }
@@ -183,13 +212,24 @@ renderer.subscribe(game);
 // game.mark('o', 0, 0);
 // game.mark('x', 2, 0);
 
+game.start('x');
 
-game.mark('x', 0, 0);
-game.mark('o', 1, 0);
-game.mark('x', 0, 1);
-game.mark('o', 0, 2);
-game.mark('x', 2, 0);
-game.mark('o', 1, 1);
-game.mark('x', 1, 2);
-game.mark('o', 2, 2);
-game.mark('x', 2, 1);
+game.mark(0, 0);
+game.mark(1, 0);
+game.mark(0, 1);
+game.mark(0, 2);
+game.mark(2, 0);
+game.mark(1, 1);
+game.mark(1, 2);
+game.mark(2, 2);
+game.mark(2, 1);
+
+game.reset();
+
+game.start("o")
+// the other diagonal o wins
+game.mark(0, 2);
+game.mark(2, 2);
+game.mark(1, 1);
+game.mark(0, 0);
+game.mark(2, 0);
